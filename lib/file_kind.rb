@@ -1,0 +1,5 @@
+module FileKind
+  
+  
+  
+end
