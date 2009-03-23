@@ -1,4 +1,4 @@
-A clean way to extend the behavior of files in Rush.  When an unknown method is called on a Rush::File, classy_files will find any classifications for that file with that method and mix it in to the file object.  E.g:
+Extend the available methods of a Rush::File object based on its name, location, etc.  When an unknown method is called on a Rush::File, classy_files will find any classifications for that file with that method and mix it in to the file object.  E.g:
 
     classify_files 'markdown', :ext => 'md' do
       def to_html
