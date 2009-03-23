@@ -30,10 +30,10 @@ describe "registering a file classification" do
     classify_files 'note', :in => path_to('notes')
     classify_files 'post', :in => path_to('posts')
     # then                                     
-    ClassyFiles::Registered.names.should == ['note', 'post']
+    ClassyFiles::Registered.should == ['note', 'post']
   end
   
-  it "should " do
+  it "adds `classifications` method to Rush::File" do
     # given
     classify_files 'note', :in => path_to('notes')
     # then                                  
@@ -42,7 +42,7 @@ describe "registering a file classification" do
     sample_note.should_not be_classified('post')    
   end                 
   
-  it "should description" do
+  it "return correct classification for a file based on its location" do
     # given
     classify_files 'note', :in => path_to('notes')
     classify_files 'post', :in => path_to('posts')
@@ -56,5 +56,28 @@ describe "registering a file classification" do
     classify_files :in => path_to('notes')
     # then
     sample_note.classifications.should == ['note']        
+  end                          
+  
+  it "allows augmenting classified files with methods" do
+    # given
+    classify_files :in => path_to('notes') do
+      def intro() lines.first end
+    end
+    # then
+    ClassyFiles::Registered.first.added_methods.should == ['intro']
+    sample_note.intro.should == 'hi'
+  end
+  
+  it "dispatches added methods to the correct file kind" do
+    # given
+    classify_files :in => path_to('notes') do
+      def intro() lines.first end
+    end
+    classify_files :in => path_to('posts') do
+      def intro() "blah" end
+    end
+    # then
+    sample_note.intro.should == 'hi'
+    sample_post.intro.should == 'blah'
   end
 end
