@@ -21,12 +21,14 @@ module ClassyFiles
     
     def initialize(*args, &method_def_block)           
       opts = args.pop                
-      @dir = opts[:in]  
+      @dir = opts[:in]
+      @ext = opts[:ext]  
       @name = args.first || generate_name
       @methods_mixin = Module.new(&method_def_block)
     end                                                 
                                             
     def generate_name
+      throw "can't generate name unless :in option given" if @dir.nil?
       @dir.to_s.split('/').last.chomp('s')      
     end
     
@@ -35,7 +37,12 @@ module ClassyFiles
     end
     
     def applies_to?(file)
-      rush_dir.entries.include?(file)
+      if @dir
+        return rush_dir.entries.include?(file)
+      end
+      if @ext
+        return File.extname(file.name)[1..-1] == @ext
+      end
     end
     
     def <=>(other)

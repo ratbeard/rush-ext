@@ -18,7 +18,7 @@ end
 
       
                              
-describe "registering a file classification" do
+describe "classifying a file" do
   include SampleHelpers                      
   include ClassyFiles
   after :each do
@@ -79,5 +79,17 @@ describe "registering a file classification" do
     # then
     sample_note.intro.should == 'hi'
     sample_post.intro.should == 'blah'
+  end
+  
+  it "by a given file extension" do
+    # given
+    classify_files 'markdown', :ext => 'md' do
+      def to_html
+        require 'maruku'
+        Maruku.new(contents).to_html
+      end
+    end 
+    # then
+    sample_note.to_html.should == "<p>hi <em>ho</em></p>"
   end
 end
