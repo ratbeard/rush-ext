@@ -65,22 +65,15 @@ module ClassyFiles
         throw "don't know restriction: #{restriction_name}" 
       end
     end
+                             
     
     def <=>(other)
-      if other.kind_of? String
-        self.name <=> other
-      else
-        self <=> other
-      end
+      (other.kind_of?(String) ?  self.name :  self )  <=>  other
     end           
     
-    def to_s 
-      name
-    end
+    def to_s()  name  end
     
-    def inspect
-      to_s
-    end
+    def inspect()  to_s  end
     
     def added_methods
       @methods_mixin.instance_methods      
