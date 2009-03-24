@@ -2,6 +2,8 @@ require 'rubygems'
 require 'spec'
 require File.join(File.dirname(__FILE__), '..', 'lib', 'classy_files.rb')
 
+# Helpers for pointing at fixture data directories, /notes and /posts,
+# found right here underneath the spec dir
 module SampleHelpers
   def path_to(dir_name)
     File.expand_path(File.join(File.dirname(__FILE__), dir_name))
@@ -18,14 +20,14 @@ end
 
       
                              
-describe "classifying a file" do
+describe "classifying files" do
   include SampleHelpers                      
   include ClassyFiles
   after :each do
     ClassyFiles::Registered.clear
-  end                            
+  end                                 
   
-  it "should store registered classifications globally" do
+  it "stores registered classifications globally" do
     # given
     classify_files 'note', :in => path_to('notes')
     classify_files 'post', :in => path_to('posts')
@@ -42,23 +44,7 @@ describe "classifying a file" do
     sample_note.should_not be_classified('post')    
   end                 
   
-  it "return correct classification for a file based on its location" do
-    # given
-    classify_files 'note', :in => path_to('notes')
-    classify_files 'post', :in => path_to('posts')
-    # then                                     
-    sample_note.classifications.should == ['note']
-    sample_post.classifications.should == ['post']
-  end   
-  
-  it "defaults classification name to the unpluralized dir name" do
-    # given
-    classify_files :in => path_to('notes')
-    # then
-    sample_note.classifications.should == ['note']        
-  end                          
-  
-  it "allows augmenting classified files with methods" do
+  it "allows adding methods" do
     # given
     classify_files :in => path_to('notes') do
       def intro() lines.first end
@@ -68,7 +54,7 @@ describe "classifying a file" do
     sample_note.intro.should == 'hi'
   end
   
-  it "dispatches added methods to the correct file kind" do
+  it "dispatches added methods to the correct classification" do
     # given
     classify_files :in => path_to('notes') do
       def intro() lines.first end
@@ -81,15 +67,51 @@ describe "classifying a file" do
     sample_post.intro.should == 'blah'
   end
   
-  it "by a given file extension" do
-    # given
-    classify_files 'markdown', :ext => 'md' do
-      def to_html
-        require 'maruku'
-        Maruku.new(contents).to_html
-      end
-    end 
-    # then
-    sample_note.to_html.should == "<p>hi <em>ho</em></p>"
+
+  
+  
+  describe "based on its filename" do
+    it "through the file extension with the :ext option" do
+      # given
+      classify_files 'markdown', :ext => 'md' do
+        def to_html
+          require 'maruku'
+          Maruku.new(contents).to_html
+        end
+      end 
+      # then
+      sample_note.to_html.should == "<p>hi <em>ho</em></p>"
+    end        
+    
+    it "through a filename regex with the :filename option" do
+      # given
+      classify_files 'blog_post', :filename => /_post/ do
+        def publish!() 200 end
+      end 
+      # then                   
+      post = Rush::Dir.new(path_to('posts'))['second_post.rb']
+      post.publish!.should == 200
+    end
+  end
+  
+  
+  describe "based on its location" do
+    it "return correct classification for a file based on its location" do
+      # given
+      classify_files 'note', :in => path_to('notes')
+      classify_files 'post', :in => path_to('posts')
+      # then                                     
+      sample_note.classifications.should == ['note']
+      sample_post.classifications.should == ['post']
+    end   
+
+    it "defaults classification name to the unpluralized dir name" do
+      # given
+      classify_files :in => path_to('notes')
+      # then
+      sample_note.classifications.should == ['note']        
+    end
+    
+    xit "takes precedence over filename declarations"
   end
 end

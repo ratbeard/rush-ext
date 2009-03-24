@@ -13,18 +13,33 @@ module ClassyFiles
     matches = find_all {|kind| kind.applies_to?(file) }
   end
   
-  # Encapsulate a classification
+  # Encapsulate a classification.
   # name, conditions, and methods to add
+  # == to its name, FileKind.new('foo') == 'foo'
   class FileKind 
     include Comparable
-    attr_accessor :name, :methods_mixin
+    attr_accessor :name,          # 
+                  :methods_mixin, # Module to mixin in to file obj 
+                  :restrictions   # :in, :ext, :filename
     
-    def initialize(*args, &method_def_block)           
-      opts = args.pop                
+    @@valid_restrictions = [:in, :ext, :filename]
+
+    def parse_opts(opts)            
+        restrictions = {}
+        @@valid_restrictions.each do |k|
+          v = opts.delete(k)
+          restrictions[k] = v if v
+        end
+        return restrictions, opts
+    end
+    
+    def initialize(*args, &methods_def_block)           
+      @restrictions, @opts = parse_opts(args.pop)                          
+      opts = @restrictions
       @dir = opts[:in]
       @ext = opts[:ext]  
       @name = args.first || generate_name
-      @methods_mixin = Module.new(&method_def_block)
+      @methods_mixin = Module.new(&methods_def_block)
     end                                                 
                                             
     def generate_name
@@ -37,11 +52,14 @@ module ClassyFiles
     end
     
     def applies_to?(file)
-      if @dir
+      if @restrictions[:in]
         return rush_dir.entries.include?(file)
       end
-      if @ext
+      if @restrictions[:ext]
         return File.extname(file.name)[1..-1] == @ext
+      end                
+      if @restrictions[:filename]
+        return file.name =~ @restrictions[:filename]
       end
     end
     
