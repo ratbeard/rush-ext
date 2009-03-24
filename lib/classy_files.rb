@@ -47,19 +47,22 @@ module ClassyFiles
       @dir.to_s.split('/').last.chomp('s')      
     end
     
-    def rush_dir
-      Rush::Dir.new(@dir) 
+    def applies_to?(file)             
+      @restrictions.keys.inject(true) {|truthy, restrict| 
+        truthy && passes_restriction?(file, restrict)
+      }
     end
     
-    def applies_to?(file)
-      if @restrictions[:in]
-        return rush_dir.entries.include?(file)
-      end
-      if @restrictions[:ext]
-        return File.extname(file.name)[1..-1] == @ext
-      end                
-      if @restrictions[:filename]
-        return file.name =~ @restrictions[:filename]
+    def passes_restriction?(file, restriction_name)             
+      case restriction_name                              
+      when :in
+        Rush::Dir.new(@dir).entries.include?(file)
+      when :ext
+        File.extname(file.name).delete('.') == @ext.delete('.')
+      when :filename
+        file.name =~ @restrictions[:filename]
+      else
+        throw "don't know restriction: #{restriction_name}" 
       end
     end
     
