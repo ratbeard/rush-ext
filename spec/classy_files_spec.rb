@@ -13,7 +13,7 @@ module SampleHelpers
     Rush::Dir.new(path_to('notes')).contents.first  
   end
   
-  def sample_post
+  def first_post
     Rush::Dir.new(path_to('posts')).contents.first  
   end
   
@@ -32,13 +32,8 @@ describe "classifying files" do
     ClassyFiles::Registered.clear
   end                                 
 
-  it "adds `classifications` method to Rush::File" do
-    # given
-    classify_files 'note', :in => path_to('notes')
-    # then                                  
-    sample_note.classifications.should have(1).thing
-    sample_note.should be_classified('note')    
-    sample_note.should_not be_classified('post')    
+  it "adds #classifications, #classified? methods to Rush::File" do
+    first_post.should respond_to(:classifications, :classified?)
   end
     
   it "stores registered classifications globally" do
@@ -69,7 +64,7 @@ describe "classifying files" do
     end
     # then
     sample_note.intro.should == 'hi'
-    sample_post.intro.should == 'blah'
+    first_post.intro.should == 'blah'
   end
   
   it "by file extension with the :ext option" do
@@ -121,7 +116,7 @@ describe "classifying files" do
     classify_files 'post', :in => path_to('posts')
     # then                                     
     sample_note.classifications.should == ['note']
-    sample_post.classifications.should == ['post']
+    first_post.classifications.should == ['post']
   end   
 
   it "defaults classification name to the unpluralized dir name" do
@@ -193,10 +188,4 @@ describe "a file with multiple classifications" do
     xit ":filename restrictions have higher priority than :ext" do
     end                                                          
   end 
-                                                                  
-
-  
 end
-
-
-
