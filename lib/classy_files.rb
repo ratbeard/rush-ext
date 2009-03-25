@@ -106,13 +106,51 @@ module Rush
     # mix it in to self and call the method
     def method_missing(meth, *args, &blk)
       k = classifications.find {|kind| kind.adds_method?(meth)}
-      
-      if k.nil? 
-        super
-      else
-        self.extend(k.methods_mixin) 
-        self.send meth, *args, &blk
-      end
+      return super if k.nil? 
+      extend(k.methods_mixin) 
+      send meth, *args, &blk  
     end
   end
+  
+  
+  class Dir
+
+    # alias :normal_files :files
+    # def files(opts={})
+    #   opts[:type]
+    #   
+    #     
+    #   end
+    # end             
+    
+    def files_with_class(classification)      
+      unless ClassyFiles::Registered.include?(classification)      
+        throw "'#{classification}' not in classifications: #{ClassyFiles::Registered.inspect}" 
+      end
+      
+      files.find_all {|file| file.classified?(classification)}
+    end  
+    
+    def method_missing(meth, *args, &blk)
+      if (classification = file_class_method(meth))
+        files_with_class(classification)
+      else
+        super
+      end
+    end      
+    
+    def respond_to?(meth)
+      super or ClassyFiles::Registered.include?(file_class_method(meth))
+    end
+    
+    private
+    # Returns the leading name if the given str/sym looks like:
+    # file_class_method?('something_files') # => 'something'  
+    # else returns nil
+    def file_class_method(meth)
+      meth.to_s =~ /^(\w+)_files$/; $1
+    end    
+    
+  end  
+  
 end

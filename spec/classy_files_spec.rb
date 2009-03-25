@@ -130,8 +130,36 @@ describe "classifying files" do
     # then
     sample_note.classifications.should == ['note']        
   end
-    
+  
+  
+  describe "querying for files of a classification in a dir" do 
+    before :each do                           
+      @notes_dir = Rush::Dir.new(path_to('notes'))  
+      classify_files :in => path_to('notes')  
+      classify_files 'markdown', :ext => 'md'
+    end   
+                                        
+    after(:each) { ClassyFiles::Registered.clear }
 
+    it "add #files_with_class method to Rush::Dir" do
+      @notes_dir.should respond_to(:files_with_class)
+    end                           
+    
+    it "adds #<classification>_files method to Rush::Dir for registered classifications" do
+      @notes_dir.should respond_to(:note_files)
+      @notes_dir.should_not respond_to(:bogus_files)
+    end
+      
+    it "lets you query for classified files in a dir" do                                  
+      @notes_dir.files_with_class('note').should have(2).things
+      @notes_dir.note_files.should have(2).things
+      
+      @notes_dir.files_with_class('markdown').should have(1).thing
+      @notes_dir.markdown_files.should have(1).thing      
+
+      lambda { @notes_dir.post_files }.should raise_error
+    end
+  end                            
 end
 
 describe "a file with multiple classifications" do
@@ -163,10 +191,12 @@ describe "a file with multiple classifications" do
     end     
     
     xit ":filename restrictions have higher priority than :ext" do
-      
     end                                                          
-    
-    
-    
-  end
+  end 
+                                                                  
+
+  
 end
+
+
+
