@@ -15,7 +15,12 @@ module SampleHelpers
   
   def sample_post
     Rush::Dir.new(path_to('posts')).contents.first  
-  end                                
+  end
+  
+  # returns /spec/posts/second_post.rb
+  def second_post                                   
+    Rush::Dir.new(path_to('posts')).contents[1]
+  end
 end                          
 
       
@@ -26,15 +31,7 @@ describe "classifying files" do
   after :each do
     ClassyFiles::Registered.clear
   end                                 
-  
-  it "stores registered classifications globally" do
-    # given
-    classify_files 'note', :in => path_to('notes')
-    classify_files 'post', :in => path_to('posts')
-    # then                                     
-    ClassyFiles::Registered.should == ['note', 'post']
-  end
-  
+
   it "adds `classifications` method to Rush::File" do
     # given
     classify_files 'note', :in => path_to('notes')
@@ -42,9 +39,17 @@ describe "classifying files" do
     sample_note.classifications.should have(1).thing
     sample_note.should be_classified('note')    
     sample_note.should_not be_classified('post')    
-  end                 
+  end
+    
+  it "stores registered classifications globally" do
+    # given
+    classify_files 'note', :in => path_to('notes')
+    classify_files 'post', :in => path_to('posts')
+    # then                                     
+    ClassyFiles::Registered.should == ['note', 'post']
+  end           
   
-  it "allows adding methods" do
+  it "allows adding methods to files" do
     # given
     classify_files :in => path_to('notes') do
       def intro() lines.first end
@@ -67,7 +72,7 @@ describe "classifying files" do
     sample_post.intro.should == 'blah'
   end
   
-  it "through the file extension with the :ext option" do
+  it "by file extension with the :ext option" do
     # given
     classify_files 'markdown', :ext => 'md' do
       def to_html
@@ -81,7 +86,7 @@ describe "classifying files" do
     lambda { not_md.to_html }.should raise_error
   end        
   
-  it "through a filename regex with the :filename option" do
+  it "by filname regex matching with the :filename option" do
     # given
     classify_files 'blog_post', :filename => /_post/ do
       def publish!() 200 end
@@ -89,10 +94,25 @@ describe "classifying files" do
     # then                   
     post = Rush::Dir.new(path_to('posts'))['second_post.rb']
     post.should be_classified 'blog_post'
-    post.publish!.should == 200
+    post.publish!.should == 200 
+    # and
     not_a_post = Rush::Dir.new(path_to('posts'))['first.md']
     not_a_post.should_not be_classified 'blog_post'
     lambda { not_a_post.publish! }.should raise_error
+  end
+  
+  xit "by declaring it a subclass of another file classification" do
+    # given
+    classify_files 'post', :in => path_to('posts') do
+      def audience() 'anyone' end
+    end                  
+    
+    classify_files 'code:post' , :ext => 'rb' do
+      def audience() 'hackers' end
+    end        
+       
+    # then                   
+    # second_post.classification.should == "code"
   end
   
   it "return correct classification for a file based on its location" do
@@ -118,18 +138,18 @@ describe "a file with multiple classifications" do
   include SampleHelpers                      
   include ClassyFiles
   
-  before :each do
-    classify_files 'post', :in => path_to('posts') do
-      def face() 'im interesting' end
-    end                 
-            
+  before :each do       
+    classify_files 'follow_up', :filename => /^(second|2)_/ do
+      def face() 'getting back to you' end
+    end
+                
     classify_files 'code', :ext => '.rb' do
       def face() '010110' end
-    end                                    
+    end                                          
     
-    classify_files 'follow_up', :filename =~ /^(second|2)_/ do
-      def face() 'getting back to you' end
-    end                              
+    classify_files 'post', :in => path_to('posts') do
+      def face() 'im interesting' end
+    end                    
   end  
   
   after :each do
@@ -138,15 +158,12 @@ describe "a file with multiple classifications" do
                                      
   
   describe "dispatches methods to the highest priority classification " do
-    it ":in restrictions have higher priority than :filename and :ext" do                                        
-      # given
-      classify_files
-      # then
+    xit ":in restrictions have higher priority than :filename and :ext" do                                        
+      second_post.face.should == "im interesting"
     end     
     
-    it ":filename restrictions have higher priority than :ext" do
-      # given
-      # then
+    xit ":filename restrictions have higher priority than :ext" do
+      
     end                                                          
     
     

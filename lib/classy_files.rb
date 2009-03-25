@@ -6,19 +6,21 @@ module ClassyFiles
   def classify_files(*args, &method_def_block)
     Registered << FileKind.new(*args, &method_def_block)
   end
+  
                            
   # Global file classification registrar
   Registered = []
   def Registered.for(file)
     matches = find_all {|kind| kind.applies_to?(file) }
   end
+                    
   
   # Encapsulate a classification.
   # name, conditions, and methods to add
   # == to its name, FileKind.new('foo') == 'foo'
   class FileKind 
     include Comparable
-    attr_accessor :name,          # 
+    attr_accessor :name,          
                   :methods_mixin, # Module to mixin in to file obj 
                   :restrictions   # :in, :ext, :filename
     
@@ -64,12 +66,16 @@ module ClassyFiles
       else
         throw "don't know restriction: #{restriction_name}" 
       end
-    end
-                             
+    end              
     
     def <=>(other)
       (other.kind_of?(String) ?  self.name :  self )  <=>  other
     end           
+    
+    def priority
+      @restriction[:in] && 10 or
+      @restriction[:filename]
+    end
     
     def to_s()  name  end
     
@@ -100,6 +106,7 @@ module Rush
     # mix it in to self and call the method
     def method_missing(meth, *args, &blk)
       k = classifications.find {|kind| kind.adds_method?(meth)}
+      
       if k.nil? 
         super
       else
