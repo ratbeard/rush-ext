@@ -2,9 +2,9 @@ require 'rush'
 
 module ClassyFiles 
 
-  # register new file classifications 
+  # register a new file classification:
   def classify_files(*args, &method_def_block)
-    Registered << FileKind.new(*args, &method_def_block)
+    Registered << FileClassification.new(*args, &method_def_block)
   end
   
                            
@@ -17,76 +17,52 @@ module ClassyFiles
   
   # Encapsulate a classification.
   # name, conditions, and methods to add
-  # == to its name, FileKind.new('foo') == 'foo'
-  class FileKind 
-    include Comparable
+  # == to its name, FileClassification.new('foo') == 'foo'
+  class FileClassification 
+    include Comparable           
     attr_accessor :name,          
-                  :methods_mixin, # Module to mixin in to file obj 
-                  :restrictions   # :in, :ext, :filename
-    
-    @@valid_restrictions = [:in, :ext, :filename]
+                  :methods_mixin,
+                  :restrict    # [:in, :ext, :filename]
 
-    def parse_opts(opts)            
-        restrictions = {}
-        @@valid_restrictions.each do |k|
-          v = opts.delete(k)
-          restrictions[k] = v if v
-        end
-        return restrictions, opts
-    end
+    # hash of procs that take in a file and a value, and see if the file
+    # passes the restriction, based on the value given at declaration time
+    # See applies_to? method
+    @@restriction_procs = {
+      :in => proc {|file, path| Rush::Dir.new(path).entries.include?(file) },
+      :ext => proc {|file, ext| File.extname(file.name).delete('.') == ext.delete('.') },
+      :filename => proc {|file, regex| file.name =~ regex }
+    }
     
     def initialize(*args, &methods_def_block)           
-      @restrictions, @opts = parse_opts(args.pop)                          
-      opts = @restrictions
-      @dir = opts[:in]
-      @ext = opts[:ext]  
+      @restrict = args.pop
       @name = args.first || generate_name
       @methods_mixin = Module.new(&methods_def_block)
-    end                                                 
-                                            
-    def generate_name
-      throw "can't generate name unless :in option given" if @dir.nil?
-      @dir.to_s.split('/').last.chomp('s')      
-    end
+    end 
     
+    # Returns if this classification applies to the given file
     def applies_to?(file)             
-      @restrictions.keys.inject(true) {|truthy, restrict| 
-        truthy && passes_restriction?(file, restrict)
+      @restrict.inject(true) {|truthy, (restriction, value)| 
+        truthy && @@restriction_procs[restriction].call(file, value)
       }
     end
     
-    def passes_restriction?(file, restriction_name)             
-      case restriction_name                              
-      when :in
-        Rush::Dir.new(@dir).entries.include?(file)
-      when :ext
-        File.extname(file.name).delete('.') == @ext.delete('.')
-      when :filename
-        file.name =~ @restrictions[:filename]
-      else
-        throw "don't know restriction: #{restriction_name}" 
-      end
-    end              
-    
+    def added_methods
+      @methods_mixin.instance_methods      
+    end                                                
+
+    # Equivelant to a string of this classications names
     def <=>(other)
       (other.kind_of?(String) ?  self.name :  self )  <=>  other
     end           
     
-    def priority
-      @restriction[:in] && 10 or
-      @restriction[:filename]
-    end
-    
     def to_s()  name  end
     
     def inspect()  to_s  end
-    
-    def added_methods
-      @methods_mixin.instance_methods      
-    end
-    
-    def adds_method?(meth)
-      added_methods.include?(meth.to_s)
+      
+    private                                              
+    def generate_name                                            
+      throw "can't generate name unless :in option given" unless @restrict[:in]
+      @restrict[:in].to_s.split('/').last.chomp('s')      
     end
   end
 end
@@ -98,17 +74,17 @@ module Rush
       ClassyFiles::Registered.for(self)
     end
     
-    def classified?(name)
-      classifications.include? name
+    def classified?(name=nil)
+      name ?  classifications.include?(name) :  !classifications.empty?
     end                          
 
     # Find first classification that adds the called method and 
     # mix it in to self and call the method
     def method_missing(meth, *args, &blk)
-      k = classifications.find {|kind| kind.adds_method?(meth)}
+      k = classifications.find {|kind| kind.added_methods.include?(meth.to_s)}
       return super if k.nil? 
-      extend(k.methods_mixin) 
-      send meth, *args, &blk  
+      self.extend(k.methods_mixin) 
+      self.send(meth, *args, &blk)
     end
   end
   
