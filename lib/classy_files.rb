@@ -7,6 +7,9 @@ module ClassyFiles
   def classify_files(*args, &method_def_block)
     Registered << FileClassification.new(*args, &method_def_block)
   end
+  def self.classify_files(*args, &method_def_block)
+    Registered << FileClassification.new(*args, &method_def_block)
+  end
   
                            
   # Global file classification registrar
