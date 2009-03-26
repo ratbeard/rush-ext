@@ -71,14 +71,24 @@ describe "classifying files" do
     # given
     classify_files 'markdown', :ext => 'md' do
       def to_html
-        require 'maruku'
-        Maruku.new(contents).to_html
+        "<html>#{contents}"
       end
     end 
     # then
-    sample_note.to_html.should == "<p>hi <em>ho</em></p>"   
-    not_md = Rush::Dir.new(path_to('posts'))['second_post.rb']
-    lambda { not_md.to_html }.should raise_error
+    first_post.to_html.should match(/<html>/)
+    lambda { second_post.to_html }.should raise_error
+  end
+  
+  it ":ext option allows an array of extensions" do
+    # given
+    classify_files 'markdown', :ext => %w{ a md mdtext markdown rb } do
+      def to_html
+        "<html>#{contents}"            
+      end
+    end 
+    # then                                           
+    first_post.to_html.should match(/<html>/)
+    second_post.to_html.should match(/<html>/)
   end        
   
   it "by filname regex matching with the :filename option" do

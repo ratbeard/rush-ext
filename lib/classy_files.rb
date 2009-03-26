@@ -1,3 +1,4 @@
+require 'rubygems'
 require 'rush'                                            
 
 module ClassyFiles 
@@ -29,7 +30,12 @@ module ClassyFiles
     # See applies_to? method
     @@restriction_procs = {
       :in => proc {|file, path| Rush::Dir.new(path).entries.include?(file) },
-      :ext => proc {|file, ext| File.extname(file.name).delete('.') == ext.delete('.') },
+      :ext => proc {|file, extensions| 
+        extensions = [extensions] unless extensions.kind_of?(Array)
+        extensions.inject(false) {|falsey, ext|
+          falsey || File.extname(file.name).delete('.') == ext.delete('.')
+        }
+      },
       :filename => proc {|file, regex| file.name =~ regex }
     }
     
@@ -40,7 +46,7 @@ module ClassyFiles
     end 
     
     # Returns if this classification applies to the given file
-    def applies_to?(file)             
+    def applies_to?(file)                                          
       @restrict.inject(true) {|truthy, (restriction, value)| 
         truthy && @@restriction_procs[restriction].call(file, value)
       }
@@ -81,29 +87,19 @@ module Rush
     # Find first classification that adds the called method and 
     # mix it in to self and call the method
     def method_missing(meth, *args, &blk)
-      k = classifications.find {|kind| kind.added_methods.include?(meth.to_s)}
-      return super if k.nil? 
-      self.extend(k.methods_mixin) 
+      classify = classifications.find {|kind| kind.added_methods.include?(meth.to_s)}
+      return super if classify.nil? 
+      self.extend(classify.methods_mixin) 
       self.send(meth, *args, &blk)
     end
   end
   
   
-  class Dir
-
-    # alias :normal_files :files
-    # def files(opts={})
-    #   opts[:type]
-    #   
-    #     
-    #   end
-    # end             
-    
+  class Dir    
     def files_with_class(classification)      
-      unless ClassyFiles::Registered.include?(classification)      
+      unless registered?(classification)
         throw "'#{classification}' not in classifications: #{ClassyFiles::Registered.inspect}" 
       end
-      
       files.find_all {|file| file.classified?(classification)}
     end  
     
@@ -116,7 +112,7 @@ module Rush
     end      
     
     def respond_to?(meth)
-      super or ClassyFiles::Registered.include?(file_class_method(meth))
+      super or registered?(file_class_method(meth))
     end
     
     private
@@ -127,6 +123,10 @@ module Rush
       meth.to_s =~ /^(\w+)_files$/; $1
     end    
     
+    # Returns if the given classification is registered.
+    def registered?(classification, opts={})             
+      registered = ClassyFiles::Registered.include?(classification)
+    end
   end  
   
 end
