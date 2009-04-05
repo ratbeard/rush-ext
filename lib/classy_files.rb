@@ -13,7 +13,7 @@ module ClassyFiles
   
                            
   # Global file classification registrar
-  Registered = []
+  Registered = [] unless const_defined?("Registered")
   def Registered.for(file)
     matches = find_all {|kind| kind.applies_to?(file) }
   end
